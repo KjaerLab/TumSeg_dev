@@ -1,4 +1,12 @@
-Demonstraion of how to use the CLI for TumSeg. 
+Demonstraion of how to use the commandline interface for TumSeg. 
+
+Installation:
+```python
+conda create -n tumseg_env python=3.9 
+conda activate tumseg_env
+cd <path to tum_seg folder>
+pip install -e .
+```
 
 Basic usage:
 ```python
