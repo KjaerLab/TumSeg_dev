@@ -4,7 +4,7 @@ Installation:
 ```python
 conda create -n tumseg_env python=3.9 
 conda activate tumseg_env
-cd <path to tum_seg folder>
+cd <path to TumSeg folder>
 pip install -e .
 ```
 
