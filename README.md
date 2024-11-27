@@ -1,4 +1,4 @@
-Demonstraion of how to use the commandline interface for TumSeg. 
+Demonstraion of how to use the command line interface for TumSeg. 
 
 Installation:
 ```python
