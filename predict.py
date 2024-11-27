@@ -1,29 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Sun Oct  6 15:32:08 2024
 
-@author: maltejensen
-"""
-
-from typing import Callable, Optional
-import torch
-import torch.nn as nn
-import scipy 
 import torchio as tio
-import nibabel as nib
-import numpy as np
-import os 
-import joblib
 import argparse
 
-from unet3d.model import UNet3D
 from tumseg_misc import postProcessROIs
 from modules import TumSeg, buildSubjectList, runInference, resampleAndPostProcess, saveResults, windowCT
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Your script description here.")
+    parser = argparse.ArgumentParser()
     
     parser.add_argument('-i', '--input_path', type=str, required=True,
                         help="Path to the input must be either a folder containing nifti files or ne a single file ending with .nii or .nii.gz")

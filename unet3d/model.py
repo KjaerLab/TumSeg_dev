@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import importlib
 import torch.nn as nn
 import torch
@@ -10,6 +13,9 @@ from tqdm import tqdm
 from unet3d.buildingblocks import Encoder, Decoder, DoubleConv, ExtResNetBlock
 from unet3d.utils import number_of_features_per_level
 
+
+def number_of_features_per_level(init_channel_number, num_levels):
+    return [init_channel_number * 2 ** k for k in range(num_levels)]
 
 class Abstract3DUNet(nn.Module):
     """

@@ -1,2 +1,4 @@
 test_dataset/
 test_outputs/
+__pycache__/
+TumSeg.egg-info/
