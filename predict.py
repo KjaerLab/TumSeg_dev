@@ -5,32 +5,19 @@ import torchio as tio
 import argparse
 
 from tumseg_misc import postProcessROIs
-from modules import TumSeg, buildSubjectList, runInference, resampleAndPostProcess, saveResults, windowCT
+from modules import TumSeg, buildSubjectList, runInference, resampleAndPostProcess, saveResults, windowCT, buildSubjectListArrays, resampleAndPostProcessArray
+from torch import cuda
 
-
-def main():
-    parser = argparse.ArgumentParser()
-    
-    parser.add_argument('-i', '--input_path', type=str, required=True,
-                        help="Path to the input must be either a folder containing nifti files or ne a single file ending with .nii or .nii.gz")
-    parser.add_argument('-o', '--output_path', type=str, required=True,
-                        help="Path to the output directory")
-    parser.add_argument('--device', type=str, required=False,
-                        help="Path to the output directory")
-    parser.add_argument('--run_uq', action='store_true', default=False,
-                        help="Run UQ (default: False)")
-    
-
-    args = parser.parse_args()
-
-
+def setup_model(device=None):
     ''' Setup TumSeg '''
     net_path_A = './networks/network_annotator_A.pt'
     net_path_B = './networks/network_annotator_B.pt'
     net_path_C = './networks/network_annotator_C.pt'
     net_path_all = './networks/network_annotator_A-C.pt'
     
-    tumseg = TumSeg(net_path_all, device = args.device)
+    if device is None:
+        device = 'cuda' if cuda.is_available() else 'cpu'
+    tumseg = TumSeg(net_path_all, device = device)
     # initialize the ensemble 
     tumseg.init_ensemble(net_path_A, net_path_B, net_path_C)
     
@@ -58,6 +45,61 @@ def main():
     tumseg.attach_post_processor_UQ(post_processor = postProcessROIs, 
                                  post_proc_kwargs = post_proc_kwargs_UQ)
     
+    return tumseg
+
+def pred_arrays(arrays, affines, run_uq=False):
+    tumseg = setup_model()
+
+    '''Setup data to run '''
+    target_pixel_size = (0.420, 0.420, 0.420)
+
+    transform = tio.Compose([
+        windowCT(-400, 400),
+        tio.RescaleIntensity([0,1]),
+        tio.Resample(target_pixel_size) 
+    ])
+
+    subjects = buildSubjectListArrays(arrays, affines)
+    print(f'Found {len(subjects)} scans')
+
+    dataloader = tio.SubjectsDataset(subjects, transform=transform)
+
+    for idx, subj in enumerate(dataloader):
+        print(f'Analyzing scan idx')
+        output = runInference(subj, tumseg)
+        
+        print('resampling..')
+        output = resampleAndPostProcessArray(output, subj, tumseg, target_pixel_size)
+        
+        if run_uq:
+            print('Running Monte-Carlo samples for UQ..')
+            uq_pred = tumseg.runUQ(subj)
+            if uq_pred < 0:
+                uq_pred = 0
+            elif uq_pred > 1:
+                uq_pred = 1
+                
+            print('')
+            print(f'Expected Dice score: {uq_pred:.3f}')
+            print('')
+
+        print('Done.\n\n')
+    
+
+def main():
+    parser = argparse.ArgumentParser()
+    
+    parser.add_argument('-i', '--input_path', type=str, required=True,
+                        help="Path to the input must be either a folder containing nifti files or ne a single file ending with .nii or .nii.gz")
+    parser.add_argument('-o', '--output_path', type=str, required=True,
+                        help="Path to the output directory")
+    parser.add_argument('--device', type=str, required=False,
+                        help="Device to run prediction on (cuda, cpu)")
+    parser.add_argument('--run_uq', action='store_true', default=False,
+                        help="Run UQ (default: False)")
+    args = parser.parse_args()
+
+    tumseg = setup_model(args.device)
     
     '''Setup data to run '''
     target_pixel_size = (0.420, 0.420, 0.420)
@@ -70,7 +112,7 @@ def main():
          ])
     
     subjects = buildSubjectList(args.input_path)
-    print('Found {} scans'.format(len(subjects)))
+    print(f'Found {len(subjects)} scans')
     
     dataloader = tio.SubjectsDataset(subjects, transform=transform)
     

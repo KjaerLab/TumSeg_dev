@@ -162,7 +162,7 @@ def windowCT(min_=-400, max_=400):
 def nifti_loader_float(path):
     img_prox = nib.load(path)
     # return torch.Tensor(img_prox.get_fdata()).type(torch.FloatTensor), np.eye(4)
-    return torch.Tensor(img_prox.get_fdata()).type(torch.FloatTensor), img_prox.header.get_base_affine()
+    return torch.tensor(img_prox.get_fdata(), dtype=torch.float32), img_prox.header.get_base_affine()
 
 def buildSubjectList(input_path):
     subjects = []
@@ -173,8 +173,7 @@ def buildSubjectList(input_path):
             CT = tio.ScalarImage(ct_path, reader=nifti_loader_float),
             CT_prox = nib.load(ct_path),
             path = ct_path
-        )
-            )
+        ))
     # input is a folder
     else:
         for path, folders, files in os.walk(input_path):
@@ -186,8 +185,7 @@ def buildSubjectList(input_path):
                             CT = tio.ScalarImage(ct_path, reader=nifti_loader_float),
                             CT_prox = nib.load(ct_path),
                             path = ct_path
-                        )
-                            )
+                        ))
         
     return subjects
 
@@ -226,5 +224,28 @@ def saveResults(output, subj, input_path, output_path, uq_pred=None):
         with open(os.path.join(output_path, rel_path, 'uq_dice_prediction.txt'), 'w') as f:
             f.write('{:.3f}'.format(uq_pred))
          
+
+#------------------------------------------------------------------------------------------------------------------------------
+# LOADING AND PREDICTION FUNCTIONS FOR ARRAYS PAST THIS LINE, TREAD CAREFULLY (NOT REALLY)
+#------------------------------------------------------------------------------------------------------------------------------
+
+def buildSubjectListArrays(arrays, affines):
+    subjects = []
+    for arr, aff in zip(arrays, affines):
+        # The input to scalar image has to be 4D (CxWxHxD)
+        if arr.ndim == 3:
+            arr = np.expand_dims(arr, 0)
+        subjects.append(tio.Subject(CT = tio.ScalarImage(tensor=torch.tensor(arr, dtype=torch.float32), affine=aff)))
+
+    return subjects
+
+def resampleAndPostProcessArray(output, subj, tumseg, target_pixel_size):
+    # inverse transform and post process 
+    target_inverse_zoom = np.array(target_pixel_size) / np.diagonal(subj['CT']['affine'])[:-1]
+    # Threshold at 0.5
+    output = scipy.ndimage.zoom(output, zoom=target_inverse_zoom, order=1) > 0.5 
+    CT_in = np.squeeze(subj['CT']['data'].numpy())
+    CT_in = np.clip(CT_in, -400, 400)
+    output = tumseg.post_process(output, CT_in)
     
-    
+    return output
