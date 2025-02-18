@@ -104,36 +104,22 @@ def pred_arrays(arrays, affines, permute=(1,0,2), run_uq=False):
     return output
     
 
-def main():
-    parser = argparse.ArgumentParser()
-    
-    parser.add_argument('-i', '--input_path', type=str, required=True,
-                        help="Path to the input must be either a folder containing nifti files or ne a single file ending with .nii or .nii.gz")
-    parser.add_argument('-o', '--output_path', type=str, required=True,
-                        help="Path to the output directory")
-    parser.add_argument('--device', type=str, required=False,
-                        help="Device to run prediction on (cuda, cpu)")
-    parser.add_argument('--run_uq', action='store_true', default=False,
-                        help="Run UQ (default: False)")
-    args = parser.parse_args()
-
+def main(input_path, output_path, device=None, run_uq=False):
     tumseg = setup_model(args.device)
     
     '''Setup data to run '''
     target_pixel_size = (0.420, 0.420, 0.420)
     
-    transform = tio.Compose(
-        [
-         windowCT(-400, 400),
-         tio.RescaleIntensity([0,1]),
-         tio.Resample(target_pixel_size) 
-         ])
+    transform = tio.Compose([
+        windowCT(-400, 400),
+        tio.RescaleIntensity([0,1]),
+        tio.Resample(target_pixel_size) 
+    ])
     
     subjects = buildSubjectList(args.input_path)
     print(f'Found {len(subjects)} scans')
     
     dataloader = tio.SubjectsDataset(subjects, transform=transform)
-    
     
     for subj in dataloader:
         print('Analyzing: ' + subj['path'])
@@ -162,7 +148,19 @@ def main():
             
             
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    
+    parser.add_argument('-i', '--input_path', type=str, required=True,
+                        help="Path to the input must be either a folder containing nifti files or ne a single file ending with .nii or .nii.gz")
+    parser.add_argument('-o', '--output_path', type=str, required=True,
+                        help="Path to the output directory")
+    parser.add_argument('--device', type=str, required=False,
+                        help="Device to run prediction on (cuda, cpu)")
+    parser.add_argument('--run_uq', action='store_true', default=False,
+                        help="Run UQ (default: False)")
+    args = parser.parse_args()
+
+    main(args.input_path, args.output_path, args.device, args.run_uq)
 
 
 
