@@ -49,6 +49,8 @@ def setup_model(device=None):
     return tumseg
 
 def pred_arrays(arrays, affines, permute=(1,0,2), run_uq=False):
+    # Axis order has to be yxz after permutation. 
+    # The default permutation (1, 0, 2) is defined for xyz arrays.
     tumseg = setup_model()
 
     '''Setup data to run '''
@@ -62,6 +64,11 @@ def pred_arrays(arrays, affines, permute=(1,0,2), run_uq=False):
 
     if permute is not None:
         arrays = [np.transpose(arr, permute) for arr in arrays]
+        # Reflecting permutation on the affines
+        for aff in affines:
+            ordering = list(permute)+[3]
+            np.fill_diagonal(aff, np.diagonal(aff)[ordering])
+            aff[:,-1] = aff[:,-1][ordering]
 
     subjects = buildSubjectListArrays(arrays, affines)
     print(f'Found {len(subjects)} scans')
@@ -74,7 +81,7 @@ def pred_arrays(arrays, affines, permute=(1,0,2), run_uq=False):
         out = runInference(subj, tumseg)
         
         print('resampling..')
-        out = resampleAndPostProcessArray(out, subj, tumseg)
+        out = resampleAndPostProcessArray(out, subj, tumseg, target_pixel_size)
         if permute is not None:
             inv_permute = np.argsort(permute)
             out = np.transpose(out, inv_permute)
