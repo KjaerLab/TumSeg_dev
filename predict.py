@@ -81,7 +81,7 @@ def pred_arrays(arrays, affines, permute=(1,0,2), run_uq=False):
         out = runInference(subj, tumseg)
         
         print('resampling..')
-        out = resampleAndPostProcessArray(out, subj, tumseg, target_pixel_size)
+        out = resampleAndPostProcessArray(out, subj, tumseg)
         if permute is not None:
             inv_permute = np.argsort(permute)
             out = np.transpose(out, inv_permute)
