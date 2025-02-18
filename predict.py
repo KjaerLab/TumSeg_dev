@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import torchio as tio
+import numpy as np
 import argparse
 
 from tumseg_misc import postProcessROIs
@@ -47,7 +48,7 @@ def setup_model(device=None):
     
     return tumseg
 
-def pred_arrays(arrays, affines, run_uq=False):
+def pred_arrays(arrays, affines, permute=(1,0,2), run_uq=False):
     tumseg = setup_model()
 
     '''Setup data to run '''
@@ -59,17 +60,25 @@ def pred_arrays(arrays, affines, run_uq=False):
         tio.Resample(target_pixel_size) 
     ])
 
+    if permute is not None:
+        arrays = [np.transpose(arr, permute) for arr in arrays]
+
     subjects = buildSubjectListArrays(arrays, affines)
     print(f'Found {len(subjects)} scans')
 
     dataloader = tio.SubjectsDataset(subjects, transform=transform)
 
+    output = []
     for idx, subj in enumerate(dataloader):
         print(f'Analyzing scan idx')
-        output = runInference(subj, tumseg)
+        out = runInference(subj, tumseg)
         
         print('resampling..')
-        output = resampleAndPostProcessArray(output, subj, tumseg, target_pixel_size)
+        out = resampleAndPostProcessArray(out, subj, tumseg)
+        if permute is not None:
+            inv_permute = np.argsort(permute)
+            out = np.transpose(out, inv_permute)
+        output.append(out)
         
         if run_uq:
             print('Running Monte-Carlo samples for UQ..')
@@ -84,6 +93,8 @@ def pred_arrays(arrays, affines, run_uq=False):
             print('')
 
         print('Done.\n\n')
+
+    return output
     
 
 def main():
