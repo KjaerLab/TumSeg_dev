@@ -235,13 +235,18 @@ def buildSubjectListArrays(arrays, affines):
         # The input to scalar image has to be 4D (CxWxHxD)
         if arr.ndim == 3:
             arr = np.expand_dims(arr, 0)
-        subjects.append(tio.Subject(CT = tio.ScalarImage(tensor=torch.tensor(arr, dtype=torch.float32), affine=aff)))
+        subjects.append(tio.Subject(
+            CT = tio.ScalarImage(tensor=torch.tensor(arr, dtype=torch.float32), affine=aff),
+            voxel_size = np.abs(np.diagonal(aff)[:3]),
+            shape = arr.shape[1:]
+        ))
 
     return subjects
 
-def resampleAndPostProcessArray(output, subj, tumseg, target_pixel_size):
+def resampleAndPostProcessArray(output, subj, tumseg):
     # inverse transform and post process 
-    target_inverse_zoom = np.array(target_pixel_size) / np.diagonal(subj['CT']['affine'])[:-1]
+    # using pixel size sometimes results in incorrect output mask size
+    target_inverse_zoom = np.array(subj['shape']) / np.array(subj['CT']['data'].shape[1:])
     # Threshold at 0.5
     output = scipy.ndimage.zoom(output, zoom=target_inverse_zoom, order=1) > 0.5 
     CT_in = np.squeeze(subj['CT']['data'].numpy())
