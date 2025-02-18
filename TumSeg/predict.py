@@ -1,20 +1,21 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
+import importlib.resources as pkg_resources
 import torchio as tio
 import numpy as np
 import argparse
 
-from tumseg_misc import postProcessROIs
-from modules import TumSeg, buildSubjectList, runInference, resampleAndPostProcess, saveResults, windowCT, buildSubjectListArrays, resampleAndPostProcessArray
+from . import networks
+from .tumseg_misc import postProcessROIs
+from .modules import TumSeg, buildSubjectList, runInference, resampleAndPostProcess, saveResults, windowCT, buildSubjectListArrays, resampleAndPostProcessArray
 from torch import cuda
 
 def setup_model(device=None):
     ''' Setup TumSeg '''
-    net_path_A = './networks/network_annotator_A.pt'
-    net_path_B = './networks/network_annotator_B.pt'
-    net_path_C = './networks/network_annotator_C.pt'
-    net_path_all = './networks/network_annotator_A-C.pt'
+    net_path_A = pkg_resources.files(networks).joinpath('network_annotator_A.pt') #'./networks/network_annotator_A.pt'
+    net_path_B = pkg_resources.files(networks).joinpath('network_annotator_B.pt') #'./networks/network_annotator_B.pt'
+    net_path_C = pkg_resources.files(networks).joinpath('network_annotator_C.pt') #'./networks/network_annotator_C.pt'
+    net_path_all = pkg_resources.files(networks).joinpath('network_annotator_A-C.pt') #'./networks/network_annotator_A-C.pt'
     
     if device is None:
         device = 'cuda' if cuda.is_available() else 'cpu'
@@ -50,7 +51,7 @@ def setup_model(device=None):
 
 def pred_arrays(arrays, affines, permute=(1,0,2), run_uq=False):
     # Axis order has to be yxz after permutation. 
-    # The default permutation (1, 0, 2) is defined for xyz arrays.
+    # The default permutation (1, 0, 2) is defined for xyz arrays. and (1,2,0) would be for zyx arrays
     tumseg = setup_model()
 
     '''Setup data to run '''

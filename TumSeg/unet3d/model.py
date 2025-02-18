@@ -10,8 +10,8 @@ import scipy
 from statsmodels.stats.inter_rater import fleiss_kappa
 from tqdm import tqdm
 
-from unet3d.buildingblocks import Encoder, Decoder, DoubleConv, ExtResNetBlock
-from unet3d.utils import number_of_features_per_level
+from .buildingblocks import Encoder, Decoder, DoubleConv, ExtResNetBlock
+from .utils import number_of_features_per_level
 
 
 def number_of_features_per_level(init_channel_number, num_levels):

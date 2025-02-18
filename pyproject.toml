@@ -22,7 +22,9 @@ dependencies = [
     "matplotlib>=3.7.1",
     "scikit-learn>=1.2.2",
 ]
-[tool.setuptools]
-packages = ["unet3d"]
+
+[tool.setuptools.package-data]
+unet3d = ["TumSeg/networks/*.pt"]
+
 [project.urls]
 Homepage = "https://github.com/KjaerLab/TumSeg"

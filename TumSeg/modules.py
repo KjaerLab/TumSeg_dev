@@ -11,8 +11,8 @@ import numpy as np
 import os 
 import joblib
 
-from unet3d.model import UNet3D
-from tumseg_misc import computeRates, precisionRecallFscore
+from .unet3d.model import UNet3D
+from .tumseg_misc import computeRates, precisionRecallFscore
 
 
 class TumSeg(nn.Module):
