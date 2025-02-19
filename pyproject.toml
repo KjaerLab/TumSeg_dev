@@ -24,7 +24,7 @@ dependencies = [
 ]
 
 [tool.setuptools.package-data]
-unet3d = ["TumSeg/networks/*.pt"]
+unet3d = ["TumSeg/networks/"]
 
 [project.urls]
 Homepage = "https://github.com/KjaerLab/TumSeg"

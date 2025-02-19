@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
+import importlib.resources as pkg_resources
 from typing import Callable, Optional
 import torch
 import torch.nn as nn
@@ -11,6 +11,7 @@ import numpy as np
 import os 
 import joblib
 
+from . import networks
 from .unet3d.model import UNet3D
 from .tumseg_misc import computeRates, precisionRecallFscore
 
@@ -73,7 +74,7 @@ class TumSeg(nn.Module):
         return self.post_processor(output, CT_in, **self.post_proc_kwargs)
     
     def loadUQModel(self):
-        self.tumseg_uq_model = joblib.load('./uq_regression_pipeline.joblib')
+        self.tumseg_uq_model = joblib.load(pkg_resources.files(networks).joinpath('uq_regression_pipeline.joblib'))
     
     def runUQ(self, subj, n_dropouts = 100, e_p = 0.35, d_p = 0.35):
         
