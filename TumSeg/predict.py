@@ -78,7 +78,7 @@ def pred_arrays(arrays, affines, permute=(1,0,2), run_uq=False):
 
     output = []
     for idx, subj in enumerate(dataloader):
-        print(f'Analyzing scan idx')
+        print(f'Analyzing scan {idx}')
         out = runInference(subj, tumseg)
         
         print('resampling..')
