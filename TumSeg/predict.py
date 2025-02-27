@@ -5,17 +5,16 @@ import torchio as tio
 import numpy as np
 import argparse
 
-from . import networks
 from .tumseg_misc import postProcessROIs
 from .modules import TumSeg, buildSubjectList, runInference, resampleAndPostProcess, saveResults, windowCT, buildSubjectListArrays, resampleAndPostProcessArray
 from torch import cuda
 
 def setup_model(device=None):
     ''' Setup TumSeg '''
-    net_path_A = pkg_resources.files(networks).joinpath('network_annotator_A.pt') #'./networks/network_annotator_A.pt'
-    net_path_B = pkg_resources.files(networks).joinpath('network_annotator_B.pt') #'./networks/network_annotator_B.pt'
-    net_path_C = pkg_resources.files(networks).joinpath('network_annotator_C.pt') #'./networks/network_annotator_C.pt'
-    net_path_all = pkg_resources.files(networks).joinpath('network_annotator_A-C.pt') #'./networks/network_annotator_A-C.pt'
+    net_path_A = pkg_resources.files("TumSeg.networks").joinpath('network_annotator_A.pt') #'./networks/network_annotator_A.pt'
+    net_path_B = pkg_resources.files("TumSeg.networks").joinpath('network_annotator_B.pt') #'./networks/network_annotator_B.pt'
+    net_path_C = pkg_resources.files("TumSeg.networks").joinpath('network_annotator_C.pt') #'./networks/network_annotator_C.pt'
+    net_path_all = pkg_resources.files("TumSeg.networks").joinpath('network_annotator_A-C.pt') #'./networks/network_annotator_A-C.pt'
     
     if device is None:
         device = 'cuda' if cuda.is_available() else 'cpu'

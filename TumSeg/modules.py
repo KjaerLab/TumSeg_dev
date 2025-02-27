@@ -11,7 +11,6 @@ import numpy as np
 import os 
 import joblib
 
-from . import networks
 from .unet3d.model import UNet3D
 from .tumseg_misc import computeRates, precisionRecallFscore
 
@@ -27,7 +26,7 @@ class TumSeg(nn.Module):
 
         self.net_all = UNet3D(in_channels=1, out_channels=2, layer_order='cbr', final_sigmoid=False, 
                       set_last_bias=False)
-        self.net_all.load_state_dict(torch.load(net_path))
+        self.net_all.load_state_dict(torch.load(net_path, weights_only=True))
         
         self.net_all = self.net_all.to(self.device)
         self.net_all.eval()
@@ -41,19 +40,19 @@ class TumSeg(nn.Module):
     def init_ensemble(self, net_path_A, net_path_B, net_path_C):
         self.net_A = UNet3D(in_channels=1, out_channels=2, layer_order='cbr', final_sigmoid=False, 
                       set_last_bias=False)
-        self.net_A.load_state_dict(torch.load(net_path_A))
+        self.net_A.load_state_dict(torch.load(net_path_A, weights_only=True))
         self.net_A = self.net_A.to(self.device)
         self.net_A.eval()
         
         self.net_B = UNet3D(in_channels=1, out_channels=2, layer_order='cbr', final_sigmoid=False, 
                       set_last_bias=False)
-        self.net_B.load_state_dict(torch.load(net_path_B))
+        self.net_B.load_state_dict(torch.load(net_path_B, weights_only=True))
         self.net_B = self.net_B.to(self.device)
         self.net_B.eval()
 
         self.net_C = UNet3D(in_channels=1, out_channels=2, layer_order='cbr', final_sigmoid=False, 
                       set_last_bias=False)
-        self.net_C.load_state_dict(torch.load(net_path_C))
+        self.net_C.load_state_dict(torch.load(net_path_C, weights_only=True))
         self.net_C = self.net_C.to(self.device)
         self.net_C.eval()
     
@@ -74,7 +73,7 @@ class TumSeg(nn.Module):
         return self.post_processor(output, CT_in, **self.post_proc_kwargs)
     
     def loadUQModel(self):
-        self.tumseg_uq_model = joblib.load(pkg_resources.files(networks).joinpath('uq_regression_pipeline.joblib'))
+        self.tumseg_uq_model = joblib.load(pkg_resources.files("TumSeg.networks").joinpath('uq_regression_pipeline.joblib'))
     
     def runUQ(self, subj, n_dropouts = 100, e_p = 0.35, d_p = 0.35):
         
