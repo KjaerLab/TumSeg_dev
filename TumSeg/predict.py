@@ -48,10 +48,10 @@ def setup_model(device=None):
     
     return tumseg
 
-def pred_arrays(arrays, affines, permute=(1,0,2), run_uq=False):
+def pred_arrays(arrays, affines, permute=(1,0,2), device=None, run_uq=False):
     # Axis order has to be yxz after permutation. 
     # The default permutation (1, 0, 2) is defined for xyz arrays. and (1,2,0) would be for zyx arrays
-    tumseg = setup_model()
+    tumseg = setup_model(device)
 
     '''Setup data to run '''
     target_pixel_size = (0.420, 0.420, 0.420)
@@ -105,7 +105,10 @@ def pred_arrays(arrays, affines, permute=(1,0,2), run_uq=False):
     
 
 def main(input_path, output_path, device=None, run_uq=False):
-    tumseg = setup_model(args.device)
+    """
+    Predicts tumor segmentation for a given input scan path and saves the results to the output path.
+    """
+    tumseg = setup_model(device)
     
     '''Setup data to run '''
     target_pixel_size = (0.420, 0.420, 0.420)
@@ -116,7 +119,7 @@ def main(input_path, output_path, device=None, run_uq=False):
         tio.Resample(target_pixel_size) 
     ])
     
-    subjects = buildSubjectList(args.input_path)
+    subjects = buildSubjectList(input_path)
     print(f'Found {len(subjects)} scans')
     
     dataloader = tio.SubjectsDataset(subjects, transform=transform)
@@ -128,7 +131,7 @@ def main(input_path, output_path, device=None, run_uq=False):
         print('resampling..')
         output = resampleAndPostProcess(output, subj, tumseg, target_pixel_size)
         
-        if args.run_uq:
+        if run_uq:
             print('Running Monte-Carlo samples for UQ..')
             uq_pred = tumseg.runUQ(subj)
             if uq_pred < 0:
@@ -140,9 +143,9 @@ def main(input_path, output_path, device=None, run_uq=False):
             print('Expected Dice score: {:.3f}'.format(uq_pred))
             print('')
             
-            saveResults(output, subj, args.input_path, args.output_path, uq_pred=uq_pred)
+            saveResults(output, subj, input_path, output_path, uq_pred=uq_pred)
         else:
-            saveResults(output, subj, args.input_path, args.output_path, uq_pred=None)
+            saveResults(output, subj, input_path, output_path, uq_pred=None)
 
         print('Done.\n\n')
             
@@ -151,7 +154,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     
     parser.add_argument('-i', '--input_path', type=str, required=True,
-                        help="Path to the input must be either a folder containing nifti files or ne a single file ending with .nii or .nii.gz")
+                        help="Path to the input must be either a folder containing nifti files or a single file ending with .nii or .nii.gz")
     parser.add_argument('-o', '--output_path', type=str, required=True,
                         help="Path to the output directory")
     parser.add_argument('--device', type=str, required=False,
