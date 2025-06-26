@@ -189,15 +189,48 @@ def buildSubjectList(input_path):
         
     return subjects
 
-def runInference(subj, tumseg):
-    with torch.no_grad():
-        CT_in = subj['CT']['data'].unsqueeze(dim=0)
-        # output = net(CT_in.cuda())
-        output = tumseg(CT_in.to(tumseg.device))
-        output = output.softmax(dim=1)
-        
-        output = output[0,1,:,:,:].detach().cpu()
+def runInference(subj, tumseg, patch_size=(128, 128, 128)):
+    floats_per_gb = (128**3) / 12 # Assuming 128x128x128 is the max patch size for 12GB of VRAM
+    freemem, totalmem = torch.cuda.mem_get_info()
+    num_floats = totalmem * floats_per_gb # Very rough estimate
+    scan_shape = subj.shape[-3:]
+
+    if scan_shape[0]*scan_shape[1]*scan_shape[2] < num_floats:
+        # Run inference on the whole scan
+        print(f'Model should be able to run prediction on the whole scan {scan_shape}, trying out...')
+        try: 
+            tumseg.eval()
+            with torch.no_grad():
+                CT_in = subj['CT']['data'].unsqueeze(dim=0)
+                output = tumseg(CT_in.to(tumseg.device))
+                output = output.softmax(dim=1)
+                
+                output = output[0,1,:,:,:].detach().cpu()
+            return output
+        except Exception as e:
+            print(f'Prediction on the whole scan failed with error: {e}. Trying again with patches...')
     
+    print('Running inference on patches...')
+    # Run inference on patches
+    # Patch size can't be bigger than the smallest axis
+    patch_side = int(num_floats**(1/3))
+    max_patch_size = [min(axis_size, patch_side) for axis_size in scan_shape]
+    print(f'Max patch size based on free memory: {max_patch_size}')
+
+    sampler = tio.inference.GridSampler(subj, max_patch_size, patch_overlap=patch_side//4)
+    aggregator = tio.inference.GridAggregator(sampler)
+    tumseg.eval()
+    with torch.no_grad():
+        for idx, patch in enumerate(sampler):
+            patch_data = patch['CT']['data'].unsqueeze(0).to(tumseg.device)
+            output = tumseg(patch_data)
+            output = output.softmax(dim=1).detach().cpu()
+            
+            # Output is of shape: (Batches, Classes, D, H, W), location shape: (Batches, 6)
+            aggregator.add_batch(output, patch[tio.LOCATION].unsqueeze(0))
+        
+    output = aggregator.get_output_tensor()
+    output = output[1,:,:,:]
     return output
 
 def resampleAndPostProcess(output, subj,tumseg, target_pixel_size):
