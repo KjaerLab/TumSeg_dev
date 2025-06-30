@@ -190,10 +190,11 @@ def buildSubjectList(input_path):
     return subjects
 
 def runInference(subj, tumseg, patch_size=(128, 128, 128)):
-    floats_per_gb = (128**3) / 12 # Assuming 128x128x128 is the max patch size for 12GB of VRAM
+    floats_per_gb = (212**3) / 11.94 # Assuming 128x128x128 is the max patch size for 12GB of VRAM
     freemem, totalmem = torch.cuda.mem_get_info()
-    num_floats = totalmem * floats_per_gb # Very rough estimate
+    num_floats = (totalmem/2**30) * floats_per_gb # Very rough estimate
     scan_shape = subj.shape[-3:]
+    print(f'Predicting scan of shape {scan_shape}')
 
     if scan_shape[0]*scan_shape[1]*scan_shape[2] < num_floats:
         # Run inference on the whole scan
@@ -213,19 +214,30 @@ def runInference(subj, tumseg, patch_size=(128, 128, 128)):
     print('Running inference on patches...')
     # Run inference on patches
     # Patch size can't be bigger than the smallest axis
+    sorted_shape = sorted(scan_shape)
     patch_side = int(num_floats**(1/3))
+    print(f'Initial patch size based on free memory: ({patch_side}x{patch_side}x{patch_side})')
+    # If the patch side is larger than the smallest axis, increase it fore the other 2
+    if sorted_shape[0] < patch_side:
+        patch_side = int((num_floats/(sorted_shape[0]))**(1/2))
+    # If the patch side is now larger than the second smallest axis, increase it for the last one
+    if sorted_shape[1] < patch_side:
+        patch_side = int(num_floats/(sorted_shape[0] * sorted_shape[1]))
+    # The patch side can't be larger than all the axes, as we would have predicted the whole scan    
     max_patch_size = [min(axis_size, patch_side) for axis_size in scan_shape]
+
     print(f'Max patch size based on free memory: {max_patch_size}')
 
-    sampler = tio.inference.GridSampler(subj, max_patch_size, patch_overlap=patch_side//4)
+    sampler = tio.inference.GridSampler(subj, max_patch_size, patch_overlap=(patch_side//10)*2)
     aggregator = tio.inference.GridAggregator(sampler)
     tumseg.eval()
     with torch.no_grad():
         for idx, patch in enumerate(sampler):
+            print(f'Processing patch {idx}/{len(sampler)}')
             patch_data = patch['CT']['data'].unsqueeze(0).to(tumseg.device)
             output = tumseg(patch_data)
             output = output.softmax(dim=1).detach().cpu()
-            
+
             # Output is of shape: (Batches, Classes, D, H, W), location shape: (Batches, 6)
             aggregator.add_batch(output, patch[tio.LOCATION].unsqueeze(0))
         
