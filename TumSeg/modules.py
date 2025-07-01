@@ -190,7 +190,7 @@ def buildSubjectList(input_path):
     return subjects
 
 def runInference(subj, tumseg, patch_size=(128, 128, 128)):
-    floats_per_gb = (212**3) / 11.94 # Assuming 128x128x128 is the max patch size for 12GB of VRAM
+    floats_per_gb = (208**3) / 11.94 # Assuming 128x128x128 is the max patch size for 12GB of VRAM
     freemem, totalmem = torch.cuda.mem_get_info()
     num_floats = (totalmem/2**30) * floats_per_gb # Very rough estimate
     scan_shape = subj.shape[-3:]
@@ -228,8 +228,8 @@ def runInference(subj, tumseg, patch_size=(128, 128, 128)):
 
     print(f'Max patch size based on free memory: {max_patch_size}')
 
-    sampler = tio.inference.GridSampler(subj, max_patch_size, patch_overlap=(patch_side//10)*2)
-    aggregator = tio.inference.GridAggregator(sampler)
+    sampler = tio.inference.GridSampler(subj, max_patch_size, patch_overlap=(patch_side//8)*2)
+    aggregator = tio.inference.GridAggregator(sampler, overlap_mode='average')
     tumseg.eval()
     with torch.no_grad():
         for idx, patch in enumerate(sampler):
