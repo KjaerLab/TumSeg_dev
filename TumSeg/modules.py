@@ -228,7 +228,7 @@ def runInference(subj, tumseg, patch_size=(128, 128, 128)):
 
     print(f'Max patch size based on free memory: {max_patch_size}')
 
-    sampler = tio.inference.GridSampler(subj, max_patch_size, patch_overlap=(patch_side//8)*2)
+    sampler = tio.inference.GridSampler(subj, max_patch_size, patch_overlap=[s//8*2 for s in max_patch_size])
     aggregator = tio.inference.GridAggregator(sampler, overlap_mode='average')
     tumseg.eval()
     with torch.no_grad():
